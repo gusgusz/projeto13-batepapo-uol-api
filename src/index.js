@@ -39,7 +39,30 @@ db =  mongoClient.db("BatePapoUol");
 
 
 
+async function updateParticipants(){
+    const dateNow = (Date.now()/1000);
+    const arr = await db.collection("participants").find().toArray();
+    const participants = arr.forEach(async (item) => { 
+        if(dateNow - item.lastStatus/1000 > 10){
+            try{
+                await db.collection("participants").deleteOne({name: item.name});
+                await db.collection("messages").insertOne({from: item.name, to: "Todos", text: "entra na sala...", type: "status", time: now.format("HH:mm:ss")});
+                res.status(201);
+            
+            }catch(err){
+                console.log(err);
+            }
+           
+        }
+      
+    });
+}
+setInterval(updateParticipants, 10000);
+// updateParticipants();
+
+
 app.post("/participants", async (req,res) => {
+    console.log(req.body);
     const body = req.body;
     const validation =  userSchema.validate(body);
     if(validation.error){
@@ -50,7 +73,7 @@ app.post("/participants", async (req,res) => {
  
     const participants = await db.collection("participants");
 
-    if(await db.collection("participants").findOne({name: body.name})){
+    if(await db.collection("participants").findOne({name: body.name} , {abortEarly: true})){
         res.status(409).send("Nome já existe");
         return;
     }
@@ -60,6 +83,7 @@ app.post("/participants", async (req,res) => {
     };
     try{
         await participants.insertOne(newBody);
+        await db.collection("messages").insertOne({from: body.name, to: "Todos", text: "entra na sala...", type: "status", time: now.format("HH:mm:ss")});
         res.status(201).send("Participante cadastrado com sucesso");
 
     } catch (err) {
@@ -123,32 +147,52 @@ app.post("/messages", async (req,res) =>{
 
 app.get("/messages", async (req,res) => {
     const limit = parseInt(req.query.limit);
-    console.log(limit);
-
-    function newArr(arr,user){
-        const nArr = [];
-        for(let i =0; i<arr.length; i++){
-            if(arr[i].from === user || arr[i].to === user || arr[i].status === "message"){
-            nArr.push(arr[i]);
-            }
-        }
-        return nArr;
-    }
+    const user = req.headers.user;
+   
     
  try{
-   const messages =  await db.collection("messages").find({}).toArray();
-   const newMessages = newArr(messages,req.headers.user);
   
+    const messages =  await db.collection("messages").find({}).toArray();
+    const newA = messages.filter(async (item) => 
+        item.to === user || item.from === user || item.to === "Todos"
+    );
+ 
+
    if(limit !== NaN){
-    res.send(newMessages.slice(-1*limit));
+    res.send(newA.slice(-1*limit));
     return;
    }
-    res.send(newMessages.slice(-100));
+    res.send(newA.slice(-100));
  } catch (err){
      res.status(500).send("Erro ao buscar mensagens");
  }
 });
 
+app.post("/status", async (req,res) => {
+    const user = req.headers.user;
+    const arr = await db.collection("participants");
+
+    if(!await arr.findOne({name: user})){
+        res.status(400).send("Usuário não existe")
+        return;
+        }
+        const newBody = {
+            name: user,
+            lastStatus: Date.now()
+        };
+        console.log(await arr.findOne({name: user}));
+
+    try{
+        await arr.updateOne({name: user},{$set: newBody});
+        res.sendStatus(201);
+        return;
+    }catch(err){
+        res.status(500).send("caiu no catch");
+        
+    }
+    
+});
 
 
-app.listen(5500);
+
+app.listen(5000);
