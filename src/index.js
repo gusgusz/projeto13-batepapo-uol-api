@@ -39,26 +39,6 @@ db =  mongoClient.db("BatePapoUol");
 
 
 
-async function updateParticipants(){
-    const dateNow = (Date.now()/1000);
-    const arr = await db.collection("participants").find().toArray();
-    const participants = arr.forEach(async (item) => { 
-        if(dateNow - item.lastStatus/1000 > 10){
-            try{
-                await db.collection("messages").insertOne({from: item.name, to: "Todos", text: "sai da sala...", type: "status", time: now.format("HH:mm:ss")});
-                await db.collection("participants").deleteOne({name: item.name});
-                res.status(201);
-            
-            }catch(err){
-                console.log(err);
-            }
-           
-        }
-      
-    });
-}
-setInterval(updateParticipants, 10000);
-// updateParticipants();
 
 
 app.post("/participants", async (req,res) => {
@@ -193,6 +173,41 @@ app.post("/status", async (req,res) => {
     
 });
 
+app.delete("/messages/:id", async (req,res) => {
+    const id = req.params.id;
+    const user = req.headers.user;
+    const arr = await db.collection("messages");
+
+    try {
+        await arr.deleteOne({ _id: ObjectId(id) });
+        res.status(200).send({ message: "Documento apagado com sucesso!" });
+      } catch (err) {
+        console.log(err);
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+
+async function updateParticipants(){
+    const dateNow = (Date.now()/1000);
+    const arr = await db.collection("participants").find().toArray();
+    const participants = arr.forEach(async (item) => { 
+        if(dateNow - item.lastStatus/1000 > 10){
+            try{
+                await db.collection("messages").insertOne({from: item.name, to: "Todos", text: "sai da sala...", type: "status", time: now.format("HH:mm:ss")});
+                await db.collection("participants").deleteOne({name: item.name});
+               
+            
+            }catch(err){
+                console.log(err);
+            }
+           
+        }
+      
+    });
+}
+setInterval(updateParticipants, 10000);
+// updateParticipants();
 
 
 app.listen(5000);
