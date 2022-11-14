@@ -45,8 +45,8 @@ async function updateParticipants(){
     const participants = arr.forEach(async (item) => { 
         if(dateNow - item.lastStatus/1000 > 10){
             try{
+                await db.collection("messages").insertOne({from: item.name, to: "Todos", text: "sai da sala...", type: "status", time: now.format("HH:mm:ss")});
                 await db.collection("participants").deleteOne({name: item.name});
-                await db.collection("messages").insertOne({from: item.name, to: "Todos", text: "entra na sala...", type: "status", time: now.format("HH:mm:ss")});
                 res.status(201);
             
             }catch(err){
