@@ -111,7 +111,7 @@ app.post("/messages", async (req,res) =>{
     }
     try{
         
-        // await db.collection("messages").insertOne(newBody);
+        await db.collection("messages").insertOne(newBody);
         res.status(201).send("Mensagem enviada com sucesso");
     } catch (err){
         res.status(500).send("Erro ao enviar mensagem");
@@ -122,13 +122,33 @@ app.post("/messages", async (req,res) =>{
 
 
 app.get("/messages", async (req,res) => {
+    const limit = parseInt(req.query.limit);
+    console.log(limit);
+
+    function newArr(arr,user){
+        const nArr = [];
+        for(let i =0; i<arr.length; i++){
+            if(arr[i].from === user || arr[i].to === user || arr[i].status === "message"){
+            nArr.push(arr[i]);
+            }
+        }
+        return nArr;
+    }
     
  try{
    const messages =  await db.collection("messages").find({}).toArray();
-    res.send(messages);
+   const newMessages = newArr(messages,req.headers.user);
+  
+   if(limit !== NaN){
+    res.send(newMessages.slice(-1*limit));
+    return;
+   }
+    res.send(newMessages.slice(-100));
  } catch (err){
      res.status(500).send("Erro ao buscar mensagens");
  }
 });
+
+
 
 app.listen(5500);
