@@ -187,6 +187,31 @@ app.delete("/messages/:id", async (req,res) => {
       }
     });
 
+app.put("/messages/:id", async (req,res) => {
+    const { id } = req.params;
+    const validation = messageSchema.validate(req.body);
+
+    if (validation.error) {
+      const errors = validation.error.details.map((detail) => detail.message);
+      res.status(400).send(errors);
+      return;
+    }
+	
+    try {
+          const user = await db.collection("messages").findOne({ _id: new ObjectId(id) })
+          if (!user) {
+              res.sendStatus(404);
+          }
+          await db.collection("messages").updateOne({ 
+			_id: user._id 
+		}, { $set: req.body });
+				       
+          res.sendStatus(200);
+       } catch (error) {
+        res.status(500).send(error);
+       }
+  
+})   
 
 async function updateParticipants(){
     const dateNow = (Date.now()/1000);
